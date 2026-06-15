@@ -50,25 +50,32 @@ int main(int argc, char *argv[])
 	
 	listen(socket_file_descriptor, 20);
 
-	while(isListening) {
-		struct sockaddr_in client;
-		unsigned int len = sizeof(client);
-		int client_socket;
-		char ip[INET_ADDRSTRLEN];
-		int port;
+	
+	//client TCP config and connection accept
 
-		client_socket = accept(socket_file_descriptor, (struct sockaddr *)&client, &len);
-
-		if (client_socket < 0) {
-		 sleep(1);
-		} else {
-		 printf("Client connected\n");
-		 isListening = false;
-		}
-
-
-		printf("End of the listening TCP loop\n");
+	struct sockaddr_in client;
+	unsigned int len = sizeof(client);
+	int client_socket;
+	char client_ip[INET_ADDRSTRLEN];
+	int client_port;
+	client_socket = accept(socket_file_descriptor, (struct sockaddr *)&client, &len);
+	if (client_socket < 0) {
+	printf("No connection accepted\n");
+	return -1;
+	} else {
+	 printf("Client connected\n");
 	}
+	
+	//getting a message
+	char buf[512];
+
+	while (recv(client_socket, buf, 511, 0) > 0) { 
+	printf("\n%s\n", buf);
+	}
+
+
+
+	printf("End of the listening TCP loop\n");
 
 	close(socket_file_descriptor);
 	printf("It works\n");
