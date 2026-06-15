@@ -6,6 +6,7 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <stdbool.h>
+#include <string.h>
 
 #define HOST "127.0.0.1"
 #define DEFAULT_PORT "9090"
@@ -68,15 +69,17 @@ int main(int argc, char *argv[])
 	
 	//getting a message
 	char buf[512];
-
+	memset(buf, 0, sizeof buf);
 	while (recv(client_socket, buf, 511, 0) > 0) { 
-	printf("\n%s\n", buf);
+	printf("\nMessage from client: \n%s\n", buf);
+
+	send(client_socket, buf, 511, 0);
 	}
 
 
-
 	printf("End of the listening TCP loop\n");
-
+	
+	close(client_socket);
 	close(socket_file_descriptor);
 	printf("It works\n");
 	return 0;
