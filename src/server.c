@@ -50,6 +50,12 @@ int init_server(unsigned int port) {
 	sock_addr.sin_family = AF_INET;
 	sock_addr.sin_port = htons(port);
 
+	int opt = 1;
+	if (setsockopt(socket_file_descriptor, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt))) {
+		perror("setsockopt");
+		return -1;
+	}
+
 	// converts ipv4 from text to binary
 	inet_pton(AF_INET, HOST, &sock_addr.sin_addr);
 	if (bind(socket_file_descriptor,(struct sockaddr *) &sock_addr, sizeof(sock_addr)) < 0) {
@@ -133,7 +139,8 @@ void recvAndSendBackMessage(Client* client_list[]) {
 			} else if (errno == EINTR || conn == 0) {
 				printf("Connection closed\n");
 				close(client_list[i]->fd);
-				memset(client_list[i], 0, sizeof(struct s_client));
+				free(client_list[i]);
+				client_list[i] = NULL;
 			}
 		}
 	}
