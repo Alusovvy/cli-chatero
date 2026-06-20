@@ -144,12 +144,11 @@ void displayCommands(Client* client) {
 }
 
 Chatroom* createChatroom(Chatroom* chatrooms[], char* buf) {
-	char* name = buf + strlen("/login ");
+	char* name = buf + strlen("/create ");
 	//find empty space for chatroom
 	for(int i = 0; i<10; i++) {
-		if (chatrooms[i]->name[0] == '\0') {
+		if (!chatrooms[i]) {
 			chatrooms[i] = malloc(sizeof(struct s_chat_room));
-			memset(chatrooms[i], 0, sizeof(struct s_chat_room));
 			strncpy(chatrooms[i]->name, name, sizeof(chatrooms[i]->name) - 1);
 			printf("Chatroom created with name: %s\n", name);
 			return chatrooms[i];
@@ -165,15 +164,13 @@ Chatroom* createChatroom(Chatroom* chatrooms[], char* buf) {
 void joinChat(Chatroom* chatrooms[], Client* client, char* buf) {
 	char* chatroom_name = buf + strlen("/join ");
 	printf("Chatroom to join: %s\n", chatroom_name);
-	for (int i = 0; i<10; i++) {
-		
-		if (strncmp(chatrooms[i]->name, chatroom_name, strlen(chatrooms[i]->name)) == 0 ) {
+	for (int i = 0; i<12; i++) {
+		if (chatrooms[i] && strncmp(chatrooms[i]->name, chatroom_name, strlen(chatrooms[i]->name)) == 0 ) {
 			client->activeChat = chatrooms[i];
+			printf("Client %s joined chat: %s\n", client->name, chatrooms[i]->name);
 			break;
 		}
-
 	}
-
 }
 
 void sendMessageToChat(Client* client, char* buf) {
@@ -182,15 +179,15 @@ void sendMessageToChat(Client* client, char* buf) {
 
 	for (int i = 0; i<128; i++) {
 		
-		if (chatroom->messages[i] == NULL) {
+		if (chatroom->messages[i] == 0) {
+			printf("Trying to send message to chat");
 			Message* message = malloc(sizeof(struct s_message));
 			strncpy(message->username, username, sizeof(message->username) - 1);
 			strncpy(message->content, buf, sizeof(message->content) - 1);
 			chatroom->messages[i] = message;
+			break;
 		}
-
 	}
-	
 }
 
 
