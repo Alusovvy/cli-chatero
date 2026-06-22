@@ -11,6 +11,10 @@
 #include <errno.h>
 #include "client.h"
 
+#ifndef SUPER_HEADER
+#include "c_datastructures.h"
+#endif
+
 #define HOST "127.0.0.1"
 #define DEFAULT_PORT "9090"
 #define BACKLOG 10 // how many pending connections queue holds
@@ -55,7 +59,7 @@ int init_server(unsigned int port) {
 }
 
 
-void main_loop(int fd, Client* client_list[], Chatroom* chatrooms[]) {
+void main_loop(int fd, Client* client_list[], HashTable* chatrooms) {
 	
 	struct pollfd fds[11]; // as I will server 10 clients + my server socket
 	memset(fds, 0, sizeof(fds));
@@ -95,12 +99,12 @@ void main_loop(int fd, Client* client_list[], Chatroom* chatrooms[]) {
 int main(int argc, char *argv[])
 {
 	Client* client_list[10] = {0};
-	Chatroom* chatrooms[12] = {0};
+	HashTable* chatrooms = create_table();
+
 	unsigned int port;
 	int socket_file_descriptor;
 	
 	memset(client_list, 0, sizeof(client_list));
-	memset(chatrooms, 0, sizeof(chatrooms));
 
 	if (argc < 2) {
 	 printf("Port NOT provided, defaulting to %s \n", DEFAULT_PORT);

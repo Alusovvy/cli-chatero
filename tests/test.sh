@@ -30,7 +30,7 @@ test() {
 
     if [ $isLoggedIn == true ]; then
         send "/login alex"
-        recv
+        recv > /dev/null
     fi
 
     send "$input"
@@ -59,4 +59,7 @@ test() {
 
     test false "Login" "/login aleks" "Type /login to login with your username User was logged in with username: aleks"
     test true "Get Details" "/details" "alex"
-   # test true "Create Chatroom" "/create room" 
+    test true "Create Chatroom" "/create room" "Chatroom created with name: room"
+    test true "Join Chatroom" "/join room" "You have joined the chatroom: room"
+
+    echo "Failed: $FAIL Passed: $PASS"

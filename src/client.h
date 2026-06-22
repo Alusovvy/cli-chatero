@@ -59,7 +59,6 @@ struct s_client {
 typedef struct s_client Client;
 
 ChatCommand parseCommand(char* userInput) {
-	printf("Raw command from user: %s\n", userInput);
 	if  (strncmp(userInput, "/login", strlen("/login")) == 0){
 		return LOGIN_COMMAND;
 	} else if (strncmp(userInput, "/history", strlen("/history")) == 0) {
@@ -75,6 +74,32 @@ ChatCommand parseCommand(char* userInput) {
 	return UNKNOWN;
 }
 
+void sendMessageToClient(Client* client, char* message, char* add_info) {
+	char msg[128];
+	int len = snprintf(msg, sizeof(msg), "%s %s\n", message, add_info);
+	printf("[INFO] Sending message: %s", msg);
+	send(client->fd, msg, len, 0);
+
+}
+
+
+void sendMessageToChat(Client* client, char* buf) {
+	char* username = client->name;
+	Chatroom* chatroom = client->activeChat;
+
+	for (int i = 0; i<128; i++) {
+		
+		if (chatroom->messages[i] == 0) {
+			Message* message = malloc(sizeof(struct s_message));
+			strncpy(message->username, username, sizeof(message->username) - 1);
+			strncpy(message->content, buf, sizeof(message->content) - 1);
+			chatroom->messages[i] = message;
+			break;
+		}
+	}
+}
+
+
 void addClientToList(Client* client, Client* client_list[]) {
 
 	for (int i = 0; i<10; i++) {
@@ -88,15 +113,11 @@ void addClientToList(Client* client, Client* client_list[]) {
 void handleLogin(Client* client, char* buf) {
 	//offszotuje login komende
 	char* username = buf + strlen("/login ");
-	printf("%s\n", client->name);
 	if (client->name[0] == '\0') {
 		strncpy(client->name, username, sizeof(client->name) - 1);
 		client->name[strcspn(client->name, "\r\n")] = '\0';
 		client->isLoggedIn = true;
-		char msg[128];
-		int len = snprintf(msg, sizeof(msg), "User was logged in with username: %s\n", username);
-		send(client->fd, msg, len, 0);
-		printf("%s\n",msg);
+		sendMessageToClient(client, "User was logged in with username: ", username);
 	}
 }
 
@@ -105,53 +126,33 @@ void displayCommands(Client* client) {
 	send(client->fd, buf, strlen(buf), 0);
 }
 
-Chatroom* createChatroom(Chatroom* chatrooms[], char* buf) {
+Chatroom* createChatroom(Client* client, HashTable* chatrooms, char* buf) {
 	char* name = buf + strlen("/create ");
-	//find empty space for chatroom
-	for(int i = 0; i<10; i++) {
-		if (!chatrooms[i]) {
-			chatrooms[i] = malloc(sizeof(struct s_chat_room));
-			strncpy(chatrooms[i]->name, name, sizeof(chatrooms[i]->name) - 1);
-			printf("Chatroom created with name: %s\n", name);
-			return chatrooms[i];
-			break;
-		}
+	Chatroom* chat = malloc(sizeof(struct s_chat_room));
+	strncpy(chat->name, name, sizeof(chat->name) - 1);
+	table_set((ht_table*)chatrooms, name, chat);
+	Chatroom* createdChat = table_get((ht_table*)chatrooms, name);
+
+	if (!createdChat) {
+		printf("[ERROR] Chat not added to chat hash table\n");
+		return NULL;
 	}
-
-	printf("No space for new chatroom, wait");
-	return NULL;
-
+	
+	sendMessageToClient(client, "Chatroom created with name: ", name);
 }
 
-void joinChat(Chatroom* chatrooms[], Client* client, char* buf) {
+void joinChat(HashTable* chatrooms, Client* client, char* buf) {
 	char* chatroom_name = buf + strlen("/join ");
-	printf("Chatroom to join: %s\n", chatroom_name);
-	for (int i = 0; i<12; i++) {
-		if (chatrooms[i] && strncmp(chatrooms[i]->name, chatroom_name, strlen(chatrooms[i]->name)) == 0 ) {
-			client->activeChat = chatrooms[i];
-			printf("Client %s joined chat: %s\n", client->name, chatrooms[i]->name);
-			break;
-		}
+
+	Chatroom* chatroom = table_get(chatrooms, chatroom_name);
+
+	if (!chatroom) {
+		sendMessageToClient(client, "Selected chatroom does not exist for name: ", chatroom_name);
 	}
+
+	client->activeChat = chatroom;
+	sendMessageToClient(client, "You have joined  the chatroom: ", chatroom->name);
 }
-
-void sendMessageToChat(Client* client, char* buf) {
-	char* username = client->name;
-	Chatroom* chatroom = client->activeChat;
-
-	for (int i = 0; i<128; i++) {
-		
-		if (chatroom->messages[i] == 0) {
-			printf("Trying to send message to chat");
-			Message* message = malloc(sizeof(struct s_message));
-			strncpy(message->username, username, sizeof(message->username) - 1);
-			strncpy(message->content, buf, sizeof(message->content) - 1);
-			chatroom->messages[i] = message;
-			break;
-		}
-	}
-}
-
 
 Client* createClientSocketAsync(int fd) {
 	//client TCP config and connection accept
@@ -176,19 +177,12 @@ Client* createClientSocketAsync(int fd) {
 	int port = ntohs(client.sin_port);
 	client_s->port = port;
 	inet_ntop(AF_INET, &client.sin_addr, client_s->ip, sizeof(client_s->ip));
-	printf("New connection from %s:%d\n", client_s->ip, port);
+	printf("[INFO] New connection from %s:%d\n", client_s->ip, port);
 	displayCommands(client_s);
 	return client_s;
 }
 
-void sendMessageToClient(Client* client, char* message) {
-	char msg[128];
-	int len = snprintf(msg, sizeof(msg), "%s\n", message);
-	send(client->fd, msg, len, 0);
-
-}
-
-void handleClient(Chatroom* chatrooms[], Client* client_list[], int i) {
+void handleClient(HashTable* chatrooms, Client* client_list[], int i) {
 	//getting a message
 	char buf[512] = {0};
 	int conn = recv(client_list[i]->fd, buf, 511, 0);
@@ -207,11 +201,11 @@ void handleClient(Chatroom* chatrooms[], Client* client_list[], int i) {
 					break;
 				case (CREATE_CHAT): 
 					printf("Command was '/create'\n");
-					createChatroom(chatrooms, buf);
+					createChatroom(client_list[i], chatrooms, buf);
 					break;
 				case (SHOW_DETAILS):
 					printf("Command was '/details'\n");
-					sendMessageToClient(client_list[i], client_list[i]->name);
+					sendMessageToClient(client_list[i], client_list[i]->name, "");
 					break;
 				case (UNKNOWN):
 					if (client_list[i]->activeChat) {
