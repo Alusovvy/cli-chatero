@@ -102,14 +102,18 @@ void sendNewChatMessage(Chatroom* chatroom) { // TO-DO this can be changed to po
     	printf("[DEBUG] chatroom->members->size = %zu\n", chatroom->members->size);
 	char* keys[16] = {0};
 	int members_count = table_get_keys(chatroom->members, keys);
-	printf("Debug d");	
+	printf("Debug d\n");	
 	for (int i = 0; i < members_count; i++) {
-			printf("Debug");
-		Client* client = table_get(clients, keys[i]);
+			printf("Debug\n");
+		Client* client = table_get(chatroom->members, keys[i]);
+		if (!client) {
+			printf("Client is null\n");
+			continue;
+		}
 		char senderInfo[256];
 		char time_stamp[64];
 		timestamp_curr(time_stamp, sizeof(time_stamp));
-		for (int j = 0; i < 512; j++) {
+		for (int j = 0; j < 512; j++) {
 			if (!chatroom->messages[j]) continue;
 			snprintf(senderInfo, sizeof(senderInfo), "%s %s:",  time_stamp, chatroom->messages[j]->username);
 			printf("The client to send message to is %s\n", client->name);
@@ -121,14 +125,13 @@ void sendNewChatMessage(Chatroom* chatroom) { // TO-DO this can be changed to po
 } 
 
 void sendMessageToChat(Client* client, char* buf) {
-	char* username = client->name;
 	Chatroom* chatroom = table_get(chatrooms, client->activeChat);
 	printf("[DEBUG] Chatroom pointer by activeChat %p\n", chatroom);
 	for (int i = 0; i<128; i++) {
 		
 		if (chatroom->messages[i] == 0) {
 			Message* message = malloc(sizeof(struct s_message));
-			strncpy(message->username, username, sizeof(message->username));
+			strncpy(message->username, client->name, sizeof(message->username));
 			strncpy(message->content, buf, sizeof(message->content) - 1);
 			chatroom->messages[i] = message;
 			break;
@@ -146,6 +149,7 @@ void handleLogin(Client* client, char* buf) {
 		client->name[strcspn(client->name, "\r\n")] = '\0';
 		client->isLoggedIn = true;
 		sendMessageToClient(client, "User was logged in with username: ", username);
+		table_set(clients, client->name, client);
 	}
 }
 

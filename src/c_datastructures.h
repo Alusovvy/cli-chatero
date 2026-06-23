@@ -53,13 +53,14 @@ void table_destroy(ht_table* table) {
 
 size_t table_get_keys(ht_table* table, char* key_arr[]) {
 	size_t count = 0;
-	for (size_t i = 0; i < table->size; i++) {
+	for (size_t i = 0; i < table->space + 1; i++) {
 		if (table->entries[i].key) {
+			printf("Key debug\n");
 			printf("Key that will be passed in get keys: %s\n", table->entries[i].key);
 			key_arr[count++] = table->entries[i].key;
 		}
 	}	
-	printf("Will pass this ehheeh");
+	printf("Will pass this ehheeh\n");
 	return count;
 }
 
