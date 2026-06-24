@@ -12,8 +12,8 @@ After running make, and ./server you can use following commands:
 
 To-Do for futures if I even get back here at some point:
 
--Check for memory leaks
--Some error handling, incorrect input handling
--Maybe a client-side to this
--UDP protocol
--IPV4/IPV6 agnostic
+    -Check for memory leaks
+    -Some error handling, incorrect input handling
+    -Maybe a client-side to this
+    -UDP protocol
+    -IPV4/IPV6 agnostic
